@@ -102,7 +102,7 @@ body{background:var(--black);color:var(--text);font-family:'Noto Sans TC',sans-s
 .loading-text{text-align:center;color:var(--text-muted);font-size:11px;letter-spacing:4px;padding:32px;text-transform:uppercase}
 
 /* ── Cap setting ── */
-.cap-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.cap-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:nowrap}
 .cap-row label{font-size:10px;letter-spacing:4px;color:var(--text-muted);text-transform:uppercase;white-space:nowrap}
 .cap-input{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;font-family:'Noto Sans TC',sans-serif;font-size:14px;width:70px;outline:none;border-radius:0;-webkit-appearance:none}
 .cap-input:focus{border-color:var(--red-dim)}
@@ -200,7 +200,7 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
     <div class="cap-row">
       <label>每時段人數上限</label>
       <input type="number" class="cap-input" id="cap-input" value="6" min="1" max="20">
-      <span>人 &nbsp;·&nbsp; 點已設定的時段可刪除</span>
+      <span style="white-space:nowrap">人</span><span style="color:var(--text-dim);font-size:11px;letter-spacing:1px;white-space:nowrap">· 點格子可刪除</span>
     </div>
 
     <div id="slot-items-list" style="display:none"></div>
@@ -334,8 +334,8 @@ function renderCalendar(){
         const net=normalizeTime(existingSlot.end_time);
         const sh=parseInt(nst.split(':')[0]);
         if(h===sh){
-          const tag=isPending?'待儲存':'';
-          label=`<div class="slot-label">${nst}–${net}${tag?' · '+tag:''}</div>`;
+          const tag=isPending?'待儲存':'已儲存';
+          label=`<div class="slot-label">${nst}–${net} · ${tag}</div>`;
         }
       } else if(isSelected){
         cls+=' selecting';
@@ -366,13 +366,28 @@ function normalizeDate(val){
 }
 function normalizeTime(val){
   if(!val) return '';
-  const s=String(val);
-  // Handle ISO time from Sheets: 1899-12-30T03:00:00.000Z means 11:00 (UTC+8)
+  const s=String(val).trim();
+  // Already HH:MM format
+  if(/^\d{1,2}:\d{2}$/.test(s)){
+    const parts=s.split(':');
+    return String(parseInt(parts[0])).padStart(2,'0')+':'+parts[1];
+  }
+  // ISO string from Sheets e.g. 1899-12-30T03:00:00.000Z
+  // Sheets stores time as 1899-12-30 base, UTC offset
+  // Use local time interpretation to get correct hour
   if(s.includes('T')){
     const d=new Date(s);
-    const h=String(d.getUTCHours()).padStart(2,'0');
-    const m=String(d.getUTCMinutes()).padStart(2,'0');
-    return h+':'+m;
+    // Try local time first (works when Sheets and browser are same timezone)
+    const localH=d.getHours();
+    const localM=d.getMinutes();
+    // Sanity check: if local hour seems wrong (Sheets 1899 base + UTC offset issue)
+    // Fall back to extracting directly from the ISO string
+    const isoTimePart=s.split('T')[1];
+    const isoH=parseInt(isoTimePart.split(':')[0]);
+    const isoM=isoTimePart.split(':')[1];
+    // Add 8 hours for UTC+8
+    const correctedH=(isoH+8)%24;
+    return String(correctedH).padStart(2,'0')+':'+isoM;
   }
   return s;
 }
