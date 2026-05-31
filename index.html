@@ -138,10 +138,10 @@ textarea{resize:vertical;min-height:76px;line-height:1.7}
 /* ── Payment ── */
 .payment-box{background:var(--surface);border:1px solid var(--border-red);padding:clamp(18px,4vw,28px);margin-bottom:24px}
 .payment-title{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text);margin-bottom:18px;letter-spacing:1px}
-.pay-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.pay-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
 .pay-row:last-child{border-bottom:none}
 .pay-key{font-size:10px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase}
-.pay-val{font-size:14px;color:var(--text);letter-spacing:1px}
+.pay-val{font-size:14px;color:var(--text);letter-spacing:1px;text-align:right;word-break:break-all}
 .pay-val.hl{color:var(--red-bright);font-family:'Cormorant Garamond',serif;font-size:22px}
 .last5-wrap{margin:20px 0}
 .last5-wrap input{text-align:center;font-size:clamp(20px,5vw,28px);letter-spacing:clamp(8px,3vw,14px);font-family:'Cormorant Garamond',serif}
@@ -403,6 +403,20 @@ function normalizeTime(val){
   return s;
 }
 
+const COURSE_DURATION = 3; // 課程時長（小時）
+
+function getStartOptions(slot) {
+  const st = normalizeTime(slot.start_time);
+  const et = normalizeTime(slot.end_time);
+  const startH = parseInt(st.split(':')[0]);
+  const endH   = parseInt(et.split(':')[0]);
+  const options = [];
+  for (let h = startH; h + COURSE_DURATION <= endH; h++) {
+    options.push(String(h).padStart(2,'0') + ':00');
+  }
+  return options;
+}
+
 function renderSlots() {
   const container = document.getElementById('slots-container');
   const open = state.slots;
@@ -414,30 +428,47 @@ function renderSlots() {
     const da = normalizeDate(a.date), db = normalizeDate(b.date);
     return da > db ? 1 : da < db ? -1 : normalizeTime(a.start_time) > normalizeTime(b.start_time) ? 1 : -1;
   });
-  container.innerHTML = '<div class="slot-grid">' + sorted.map((s, i) => {
+
+  // Build slot-date groups with start time options
+  let html = '';
+  sorted.forEach((s, i) => {
     const nd = normalizeDate(s.date);
     const d = new Date(nd.replace(/\//g, '-') + 'T00:00:00');
     const dayName = '週' + DAYS[d.getDay()];
     const spots = parseInt(s.max_capacity) - (parseInt(s.current_bookings) || 0);
     const isFull = s.status === 'full' || spots <= 0;
-    return `<div class="slot-card${isFull ? ' disabled' : ''}" id="slot-${i}" onclick="pickSlot(${i}, '${s.id}')">
-      <div class="slot-day">${dayName}</div>
-      <div class="slot-time">${normalizeTime(s.start_time)}–${normalizeTime(s.end_time)}</div>
-      <div class="slot-date">${nd}</div>
-      ${isFull
-        ? '<div class="slot-full">FULL</div>'
-        : `<div class="slot-spots${spots <= 2 ? ' low' : ''}">尚餘 ${spots} 名</div>`
-      }
-    </div>`;
-  }).join('') + '</div>';
+    const options = getStartOptions(s);
+
+    if (isFull) {
+      html += `<div class="slot-card disabled">
+        <div class="slot-day">${dayName}</div>
+        <div class="slot-date">${nd}</div>
+        <div class="slot-full">FULL</div>
+      </div>`;
+      return;
+    }
+
+    // One card per start time option
+    options.forEach((startTime, j) => {
+      const endTime = String(parseInt(startTime.split(':')[0]) + COURSE_DURATION).padStart(2,'0') + ':00';
+      const cardId = 'slot-' + i + '-' + j;
+      html += `<div class="slot-card" id="${cardId}" onclick="pickSlot('${s.id}', '${nd}', '${startTime}', '${endTime}', '${dayName}', ${spots})">
+        <div class="slot-day">${dayName}</div>
+        <div class="slot-time">${startTime}–${endTime}</div>
+        <div class="slot-date">${nd}</div>
+        <div class="slot-spots${spots <= 2 ? ' low' : ''}">尚餘 ${spots} 名</div>
+      </div>`;
+    });
+  });
+
+  container.innerHTML = '<div class="slot-grid">' + html + '</div>';
 }
 
 // ── 選擇時段 ─────────────────────────────────────────────
-function pickSlot(idx, slotId) {
+function pickSlot(slotId, date, startTime, endTime, dayName, spots) {
   document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
-  const el = document.getElementById('slot-' + idx);
-  if (el) el.classList.add('selected');
-  state.selectedSlot = { idx, id: slotId };
+  event.currentTarget.classList.add('selected');
+  state.selectedSlot = { id: slotId, date, startTime, endTime, dayName };
   updateCTA();
 }
 
@@ -456,18 +487,17 @@ async function goToForm() {
   try {
     const r = await fetch(API, {
       method: 'POST',
-      body: JSON.stringify({ action: 'lockSlot', slotId: slot.id })
+      body: JSON.stringify({ action: 'lockSlot', slotId: state.selectedSlot.id })
     });
     const d = await r.json();
     if (!d.success) { alert(d.message); return; }
     startTimer(d.lockMinutes || 10);
   } catch(e) { alert('無法鎖定時段，請重試'); return; }
 
-  const nd2 = normalizeDate(slot.date);
-  const d = new Date(nd2.replace(/\//g, '-') + 'T00:00:00');
+  const sel = state.selectedSlot;
   document.getElementById('selection-summary').innerHTML = `
     <div style="font-size:10px;letter-spacing:3px;color:var(--text-muted);margin-bottom:5px">
-      ${nd2} 週${DAYS[d.getDay()]} ｜ ${normalizeTime(slot.start_time)}–${normalizeTime(slot.end_time)}
+      ${sel.date} ${sel.dayName} ｜ ${sel.startTime}–${sel.endTime}
     </div>
     <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text);margin-bottom:3px">${tpl.title}</div>
   `;
@@ -586,6 +616,8 @@ async function submitBooking() {
       body: JSON.stringify({
         action: 'submitBooking',
         slotId: state.selectedSlot.id,
+        selectedStartTime: state.selectedSlot.startTime,
+        selectedEndTime: state.selectedSlot.endTime,
         templateId: tpl.id,
         contactName: document.getElementById('f-name').value,
         phone: document.getElementById('f-phone').value,
