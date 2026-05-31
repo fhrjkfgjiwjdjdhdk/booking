@@ -270,7 +270,7 @@ async function loadAll(){
       fetch(API+'?action=getBookings')
     ]);
     const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
-    state.slots=d1.slots||[];
+    state.slots=(d1.slots||[]).map(normalizeSlot);
     state.templates=d2.templates||[];
     state.bookings=d3.bookings||[];
     renderCalendar();
@@ -344,6 +344,36 @@ function renderCalendar(){
   document.addEventListener('mouseup',globalEndDrag,{once:false});
 }
 
+function normalizeDate(val){
+  if(!val) return '';
+  const s=String(val);
+  // Handle ISO date string from Sheets: 2026-05-25T16:00:00.000Z
+  if(s.includes('T')){
+    const d=new Date(s);
+    return d.getFullYear()+'/'+(String(d.getMonth()+1).padStart(2,'0'))+'/'+String(d.getDate()).padStart(2,'0');
+  }
+  return s.replace(/-/g,'/');
+}
+function normalizeTime(val){
+  if(!val) return '';
+  const s=String(val);
+  // Handle ISO time from Sheets: 1899-12-30T03:00:00.000Z means 11:00 (UTC+8)
+  if(s.includes('T')){
+    const d=new Date(s);
+    const h=String(d.getUTCHours()).padStart(2,'0');
+    const m=String(d.getUTCMinutes()).padStart(2,'0');
+    return h+':'+m;
+  }
+  return s;
+}
+function normalizeSlot(s){
+  return {...s,
+    date: normalizeDate(s.date),
+    start_time: normalizeTime(s.start_time),
+    end_time: normalizeTime(s.end_time)
+  };
+}
+
 function getSlotAt(dateStr,hour){
   const allSlots=[...state.slots,...state.pendingSlots];
   return allSlots.find(s=>{
@@ -405,6 +435,11 @@ function finalizeSlot(){
   renderCalendar();
   renderSlotList();
   document.getElementById('save-slots-btn').style.display=state.pendingSlots.length?'block':'none';
+  // Auto scroll to slot list
+  setTimeout(()=>{
+    const el=document.getElementById('slot-items-list');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  },100);
 }
 function updateSelecting(){
   document.querySelectorAll('.time-cell').forEach(el=>el.classList.remove('selecting'));
@@ -442,7 +477,7 @@ function renderSlotList(){
     return `<div class="slot-item">
       <div class="slot-dot ${sc}"></div>
       <div class="slot-info">
-        <div class="slot-datetime">${String(s.date).replace(/-/g,'/')} ${dayName} &nbsp;${s.start_time}–${s.end_time}</div>
+        <div class="slot-datetime">${normalizeDate(s.date)} ${dayName} &nbsp;${normalizeTime(s.start_time)}–${normalizeTime(s.end_time)}</div>
         <div class="slot-sub">${isPending?'⏳ 尚未儲存':`${parseInt(s.current_bookings)||0} / ${s.max_capacity} 人已預約`}</div>
       </div>
       <div class="slot-acts">
@@ -488,6 +523,10 @@ async function saveNewSlots(){
     state.selectedCells=new Set();
     await loadAll();
     showToast('✦ 時段已儲存');
+    setTimeout(()=>{
+      const el=document.getElementById('calendar');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },300);
   }catch(e){showToast('儲存失敗，請重試');}
   btn.disabled=false;btn.querySelector('span').textContent='儲存新增時段 →';
   btn.style.display='none';
