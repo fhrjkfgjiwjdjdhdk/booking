@@ -68,16 +68,16 @@ body{background:var(--black);color:var(--text);font-family:'Noto Sans TC',sans-s
 .week-label{font-family:'Cormorant Garamond',serif;font-size:18px;letter-spacing:2px;color:var(--text)}
 .week-btns{display:flex;gap:6px}
 
-.cal-wrap{overflow-x:auto;border:1px solid var(--border);margin-bottom:20px;-webkit-overflow-scrolling:touch}
-.calendar{display:grid;grid-template-columns:44px repeat(7,1fr);min-width:520px;user-select:none}
+.cal-wrap{border:1px solid var(--border);margin-bottom:20px;overflow:hidden}
+.calendar{display:grid;grid-template-columns:36px repeat(7,1fr);width:100%;user-select:none}
 .cal-corner{background:var(--surface);border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
-.cal-day-hd{background:var(--surface);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:8px 4px;text-align:center}
+.cal-day-hd{background:var(--surface);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:clamp(4px,1.5vw,8px) 2px;text-align:center}
 .cal-day-hd:last-child{border-right:none}
-.day-name{font-size:9px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;display:block}
-.day-date{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--text);display:block;margin-top:2px}
+.day-name{font-size:clamp(7px,1.8vw,9px);letter-spacing:clamp(0px,0.5vw,3px);color:var(--text-muted);text-transform:uppercase;display:block}
+.day-date{font-family:'Cormorant Garamond',serif;font-size:clamp(12px,3vw,16px);color:var(--text);display:block;margin-top:2px}
 .cal-day-hd.today .day-date{color:var(--red-bright)}
-.time-label{height:36px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;padding:0 6px;font-size:9px;color:var(--text-dim);letter-spacing:1px;background:var(--surface)}
-.time-cell{height:36px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;position:relative}
+.time-label{height:clamp(28px,5vw,36px);border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;padding:0 4px;font-size:clamp(7px,1.5vw,9px);color:var(--text-dim);background:var(--surface)}
+.time-cell{height:clamp(28px,5vw,36px);border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;position:relative}
 .time-cell:last-child{border-right:none}
 .time-cell:hover{background:var(--red-dim)}
 .time-cell.selecting{background:#4a0e0e}
@@ -190,6 +190,9 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
       </div>
     </div>
 
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-sm" id="save-slots-btn" onclick="saveNewSlots()" style="display:none"><span>✦ 儲存新增時段</span></button>
+    </div>
     <div class="cal-wrap"><div class="calendar" id="calendar"></div></div>
 
     <div class="cap-row">
@@ -200,7 +203,6 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
 
     <div class="section-label">本週已設定時段</div>
     <div id="slot-items-list"><div class="loading-text">— 載入中 —</div></div>
-    <button class="btn" id="save-slots-btn" onclick="saveNewSlots()" style="display:none"><span>儲存新增時段 →</span></button>
   </div>
 
   <!-- 課程設定 -->
@@ -438,8 +440,8 @@ function finalizeSlot(){
   // Auto scroll to slot list
   setTimeout(()=>{
     const el=document.getElementById('slot-items-list');
-    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-  },100);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },150);
 }
 function updateSelecting(){
   document.querySelectorAll('.time-cell').forEach(el=>el.classList.remove('selecting'));
