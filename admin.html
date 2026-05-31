@@ -434,10 +434,11 @@ function finalizeSlot(){
   state.pendingSlots.push({id:'new_'+Date.now(),date:dateStr,start_time:startTime,end_time:endTime,max_capacity:cap,current_bookings:0,status:'open',isPending:true,startH:h1});
   for(let h=h1;h<=h2;h++) state.selectedCells.add(cellKey(dateStr,h));
   clearSelecting();
+  const scrollY = window.scrollY;
   renderCalendar();
   renderSlotList();
   document.getElementById('save-slots-btn').style.display=state.pendingSlots.length?'block':'none';
-
+  window.scrollTo({top:scrollY,behavior:'instant'});
 }
 function updateSelecting(){
   document.querySelectorAll('.time-cell').forEach(el=>el.classList.remove('selecting'));
