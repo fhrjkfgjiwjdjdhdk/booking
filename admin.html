@@ -80,10 +80,12 @@ body{background:var(--black);color:var(--text);font-family:'Noto Sans TC',sans-s
 .time-cell{height:clamp(28px,5vw,36px);border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;position:relative}
 .time-cell:last-child{border-right:none}
 .time-cell:hover{background:var(--red-dim)}
-.time-cell.selecting{background:#4a0e0e}
-.time-cell.slotted{background:var(--red-dim);cursor:default}
-.time-cell.slotted:hover{background:#7a1515}
-.slot-label{position:absolute;top:1px;left:2px;right:2px;font-size:8px;color:#e8e0d5;letter-spacing:1px;overflow:hidden;white-space:nowrap;pointer-events:none}
+.time-cell.selecting{background:#5a1515}
+.time-cell.pending{background:#7a1a1a;cursor:pointer}
+.time-cell.pending:hover{background:#8a2020}
+.time-cell.slotted{background:#3a0a0a;cursor:pointer}
+.time-cell.slotted:hover{background:#4a1010}
+.slot-label{position:absolute;top:1px;left:2px;right:2px;font-size:clamp(6px,1.2vw,8px);color:#c8b8a8;letter-spacing:0px;overflow:hidden;white-space:nowrap;pointer-events:none;opacity:0.9}
 
 /* ── Slot list ── */
 .slot-items{margin-bottom:24px}
@@ -198,11 +200,10 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
     <div class="cap-row">
       <label>每時段人數上限</label>
       <input type="number" class="cap-input" id="cap-input" value="6" min="1" max="20">
-      <span>人</span>
+      <span>人 &nbsp;·&nbsp; 點已設定的時段可刪除</span>
     </div>
 
-    <div class="section-label">本週已設定時段</div>
-    <div id="slot-items-list"><div class="loading-text">— 載入中 —</div></div>
+    <div id="slot-items-list" style="display:none"></div>
   </div>
 
   <!-- 課程設定 -->
@@ -324,11 +325,16 @@ function renderCalendar(){
       const ck=cellKey(dk,h);
       const isSelected=state.selectedCells.has(ck);
       const existingSlot=getSlotAt(dk,h);
+      const isPending=existingSlot&&existingSlot.isPending;
       let cls='time-cell';
       let label='';
       if(existingSlot){
-        cls+=' slotted';
-        if(h===existingSlot.startH) label=`<div class="slot-label">${existingSlot.start_time}–${existingSlot.end_time}</div>`;
+        cls+=isPending?' pending':' slotted';
+        const sh=parseInt(existingSlot.start_time.split(':')[0]);
+        if(h===sh){
+          const tag=isPending?'待儲存':'';
+          label=`<div class="slot-label">${existingSlot.start_time}–${existingSlot.end_time}${tag?' · '+tag:''}</div>`;
+        }
       } else if(isSelected){
         cls+=' selecting';
       }
@@ -434,11 +440,9 @@ function finalizeSlot(){
   state.pendingSlots.push({id:'new_'+Date.now(),date:dateStr,start_time:startTime,end_time:endTime,max_capacity:cap,current_bookings:0,status:'open',isPending:true,startH:h1});
   for(let h=h1;h<=h2;h++) state.selectedCells.add(cellKey(dateStr,h));
   clearSelecting();
-  const scrollY = window.scrollY;
   renderCalendar();
   renderSlotList();
   document.getElementById('save-slots-btn').style.display=state.pendingSlots.length?'block':'none';
-  window.scrollTo({top:scrollY,behavior:'instant'});
 }
 function updateSelecting(){
   document.querySelectorAll('.time-cell').forEach(el=>el.classList.remove('selecting'));
@@ -503,8 +507,14 @@ function removePendingSlot(id){
 
 function confirmRemoveSlot(dateStr,hour){
   const slot=getSlotAt(dateStr,hour);
-  if(!slot||slot.isPending){if(slot)removePendingSlot(slot.id);return;}
-  if(confirm('確定要刪除這個時段？')) deleteSlot(slot.id);
+  if(!slot) return;
+  if(slot.isPending){
+    removePendingSlot(slot.id);
+    return;
+  }
+  if(confirm('確定要刪除「'+normalizeDate(slot.date)+' '+normalizeTime(slot.start_time)+'–'+normalizeTime(slot.end_time)+'」這個時段？')){
+    deleteSlot(slot.id);
+  }
 }
 
 async function saveNewSlots(){
@@ -522,10 +532,6 @@ async function saveNewSlots(){
     state.selectedCells=new Set();
     await loadAll();
     showToast('✦ 時段已儲存');
-    setTimeout(()=>{
-      const el=document.getElementById('slot-items-list');
-      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-    },300);
   }catch(e){showToast('儲存失敗，請重試');}
   btn.disabled=false;btn.querySelector('span').textContent='儲存新增時段 →';
   btn.style.display='none';
