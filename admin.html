@@ -273,7 +273,7 @@ async function loadAll(){
       fetch(API+'?action=getBookings')
     ]);
     const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
-    state.slots=(d1.slots||[]).map(normalizeSlot);
+    state.slots=(d1.slots||[]).map(normalizeSlot).map(s=>({...s,startH:parseInt(normalizeTime(s.start_time).split(':')[0])}));
     state.templates=d2.templates||[];
     state.bookings=d3.bookings||[];
     renderCalendar();
@@ -330,10 +330,12 @@ function renderCalendar(){
       let label='';
       if(existingSlot){
         cls+=isPending?' pending':' slotted';
-        const sh=parseInt(existingSlot.start_time.split(':')[0]);
+        const nst=normalizeTime(existingSlot.start_time);
+        const net=normalizeTime(existingSlot.end_time);
+        const sh=parseInt(nst.split(':')[0]);
         if(h===sh){
           const tag=isPending?'待儲存':'';
-          label=`<div class="slot-label">${existingSlot.start_time}–${existingSlot.end_time}${tag?' · '+tag:''}</div>`;
+          label=`<div class="slot-label">${nst}–${net}${tag?' · '+tag:''}</div>`;
         }
       } else if(isSelected){
         cls+=' selecting';
@@ -385,9 +387,12 @@ function normalizeSlot(s){
 function getSlotAt(dateStr,hour){
   const allSlots=[...state.slots,...state.pendingSlots];
   return allSlots.find(s=>{
-    if(String(s.date).replace(/\//g,'-')!==dateStr) return false;
-    const sh=parseInt(s.start_time.split(':')[0]);
-    const eh=parseInt(s.end_time.split(':')[0]);
+    const nd=normalizeDate(s.date).replace(/\//g,'-');
+    if(nd!==dateStr) return false;
+    const st=normalizeTime(s.start_time);
+    const et=normalizeTime(s.end_time);
+    const sh=parseInt(st.split(':')[0]);
+    const eh=parseInt(et.split(':')[0]);
     return hour>=sh && hour<eh;
   })||null;
 }
