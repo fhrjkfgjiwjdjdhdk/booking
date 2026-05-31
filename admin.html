@@ -437,11 +437,7 @@ function finalizeSlot(){
   renderCalendar();
   renderSlotList();
   document.getElementById('save-slots-btn').style.display=state.pendingSlots.length?'block':'none';
-  // Auto scroll to slot list
-  setTimeout(()=>{
-    const el=document.getElementById('slot-items-list');
-    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
-  },150);
+
 }
 function updateSelecting(){
   document.querySelectorAll('.time-cell').forEach(el=>el.classList.remove('selecting'));
@@ -526,7 +522,7 @@ async function saveNewSlots(){
     await loadAll();
     showToast('✦ 時段已儲存');
     setTimeout(()=>{
-      const el=document.getElementById('calendar');
+      const el=document.getElementById('slot-items-list');
       if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
     },300);
   }catch(e){showToast('儲存失敗，請重試');}
