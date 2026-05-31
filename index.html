@@ -382,6 +382,27 @@ function toggleDetail() {
 }
 
 // ── 渲染時段 ─────────────────────────────────────────────
+function normalizeDate(val){
+  if(!val) return '';
+  const s = String(val);
+  if(s.includes('T')){
+    const d = new Date(s);
+    return d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0');
+  }
+  return s.replace(/-/g, '/');
+}
+function normalizeTime(val){
+  if(!val) return '';
+  const s = String(val).trim();
+  if(/^\d{1,2}:\d{2}$/.test(s)) return s;
+  if(s.includes('T')){
+    const isoH = parseInt(s.split('T')[1].split(':')[0]);
+    const isoM = s.split('T')[1].split(':')[1];
+    return String((isoH+8)%24).padStart(2,'0') + ':' + isoM;
+  }
+  return s;
+}
+
 function renderSlots() {
   const container = document.getElementById('slots-container');
   const open = state.slots;
@@ -389,16 +410,20 @@ function renderSlots() {
     container.innerHTML = '<div class="empty-slots">目前無開放時段，請關注最新消息 ✦</div>';
     return;
   }
-  const sorted = [...open].sort((a, b) => a.date > b.date ? 1 : a.date < b.date ? -1 : a.start_time > b.start_time ? 1 : -1);
+  const sorted = [...open].sort((a, b) => {
+    const da = normalizeDate(a.date), db = normalizeDate(b.date);
+    return da > db ? 1 : da < db ? -1 : normalizeTime(a.start_time) > normalizeTime(b.start_time) ? 1 : -1;
+  });
   container.innerHTML = '<div class="slot-grid">' + sorted.map((s, i) => {
-    const d = new Date(String(s.date).replace(/\//g, '-') + 'T00:00:00');
+    const nd = normalizeDate(s.date);
+    const d = new Date(nd.replace(/\//g, '-') + 'T00:00:00');
     const dayName = '週' + DAYS[d.getDay()];
     const spots = parseInt(s.max_capacity) - (parseInt(s.current_bookings) || 0);
     const isFull = s.status === 'full' || spots <= 0;
     return `<div class="slot-card${isFull ? ' disabled' : ''}" id="slot-${i}" onclick="pickSlot(${i}, '${s.id}')">
       <div class="slot-day">${dayName}</div>
-      <div class="slot-time">${s.start_time}–${s.end_time}</div>
-      <div class="slot-date">${s.date}</div>
+      <div class="slot-time">${normalizeTime(s.start_time)}–${normalizeTime(s.end_time)}</div>
+      <div class="slot-date">${nd}</div>
       ${isFull
         ? '<div class="slot-full">FULL</div>'
         : `<div class="slot-spots${spots <= 2 ? ' low' : ''}">尚餘 ${spots} 名</div>`
@@ -438,10 +463,11 @@ async function goToForm() {
     startTimer(d.lockMinutes || 10);
   } catch(e) { alert('無法鎖定時段，請重試'); return; }
 
-  const d = new Date(String(slot.date).replace(/\//g, '-') + 'T00:00:00');
+  const nd2 = normalizeDate(slot.date);
+  const d = new Date(nd2.replace(/\//g, '-') + 'T00:00:00');
   document.getElementById('selection-summary').innerHTML = `
     <div style="font-size:10px;letter-spacing:3px;color:var(--text-muted);margin-bottom:5px">
-      ${slot.date} 週${DAYS[d.getDay()]} ｜ ${slot.start_time}–${slot.end_time}
+      ${nd2} 週${DAYS[d.getDay()]} ｜ ${normalizeTime(slot.start_time)}–${normalizeTime(slot.end_time)}
     </div>
     <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text);margin-bottom:3px">${tpl.title}</div>
   `;
