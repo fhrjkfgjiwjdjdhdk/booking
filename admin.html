@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>後台管理｜Le Hemora</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#0a0806;--surface:#16120e;--surface2:#1e1812;--surface3:#251e16;
+  --red:#9A0E0E;--red-bright:#c41212;--red-dim:#6b0a0a;--border-red:#3d1010;
+  --green:#1a4a1a;--green-bright:#4a9a4a;
+  --text:#e8e0d5;--text-muted:#9a8f82;--text-dim:#5a5048;--border:#2a2218;
+}
+body{background:var(--black);color:var(--text);font-family:'Noto Sans TC',sans-serif;font-weight:300;min-height:100vh}
+
+/* ── Login ── */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-box{width:100%;max-width:340px;text-align:center}
+.login-title{font-family:'Cormorant Garamond',serif;font-size:28px;letter-spacing:3px;color:var(--text);margin-bottom:6px}
+.login-sub{font-size:10px;letter-spacing:5px;color:var(--text-muted);text-transform:uppercase;margin-bottom:40px}
+.login-box input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:14px 18px;font-family:'Noto Sans TC',sans-serif;font-size:15px;letter-spacing:4px;text-align:center;outline:none;border-radius:0;margin-bottom:12px;-webkit-appearance:none}
+.login-box input:focus{border-color:var(--red-dim)}
+.login-box input::placeholder{letter-spacing:2px;font-size:13px;color:var(--text-dim)}
+.login-err{font-size:11px;color:var(--red-bright);letter-spacing:2px;height:16px;margin-bottom:12px}
+
+/* ── Buttons ── */
+.btn{background:transparent;border:1px solid var(--red-dim);color:var(--text);padding:12px 20px;font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;border-radius:0;white-space:nowrap}
+.btn::before{content:'';position:absolute;left:-100%;top:0;bottom:0;width:100%;background:var(--red-dim);transition:left 0.25s;z-index:0}
+.btn:hover::before{left:0}
+.btn span{position:relative;z-index:1}
+.btn:disabled{opacity:0.3;cursor:not-allowed}
+.btn-full{width:100%}
+.btn-sm{padding:7px 14px;font-size:10px;letter-spacing:3px}
+.btn-ghost{border-color:var(--border);color:var(--text-muted)}
+.btn-ghost::before{background:var(--surface2)}
+.btn-danger{border-color:var(--red-dim);color:var(--red-bright)}
+.btn-danger::before{background:var(--red-dim)}
+.btn-success{border-color:#2a5a2a;color:var(--green-bright)}
+.btn-success::before{background:var(--green)}
+
+/* ── Admin Shell ── */
+#admin-shell{display:none;min-height:100vh}
+.admin-header{background:var(--surface);border-bottom:1px solid var(--border-red);padding:14px clamp(16px,4vw,28px);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100}
+.admin-logo{font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:4px;color:var(--text)}
+.admin-logo span{color:var(--red);font-size:10px;letter-spacing:3px;font-family:'Noto Sans TC',sans-serif;margin-left:10px}
+.admin-nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav-btn{background:transparent;border:1px solid transparent;color:var(--text-muted);padding:7px clamp(10px,2vw,16px);font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;border-radius:0}
+.nav-btn.active,.nav-btn:hover{border-color:var(--border-red);color:var(--text)}
+.nav-badge{background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;vertical-align:middle}
+
+/* ── Layout ── */
+.admin-body{max-width:900px;margin:0 auto;padding:clamp(20px,4vw,36px) clamp(16px,4vw,28px)}
+.panel{display:none}.panel.active{display:block}
+.section-label{font-size:10px;letter-spacing:6px;color:var(--red);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.section-label::before,.section-label::after{content:'';flex:1;height:1px;background:var(--border-red)}
+.divider{height:1px;background:var(--border);margin:28px 0}
+
+/* ── Stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);padding:16px 18px}
+.stat-num{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--text);line-height:1}
+.stat-label{font-size:10px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;margin-top:5px}
+
+/* ── Week calendar ── */
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.week-label{font-family:'Cormorant Garamond',serif;font-size:18px;letter-spacing:2px;color:var(--text)}
+.week-btns{display:flex;gap:6px}
+
+.cal-wrap{overflow-x:auto;border:1px solid var(--border);margin-bottom:20px;-webkit-overflow-scrolling:touch}
+.calendar{display:grid;grid-template-columns:44px repeat(7,1fr);min-width:520px;user-select:none}
+.cal-corner{background:var(--surface);border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.cal-day-hd{background:var(--surface);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:8px 4px;text-align:center}
+.cal-day-hd:last-child{border-right:none}
+.day-name{font-size:9px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;display:block}
+.day-date{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--text);display:block;margin-top:2px}
+.cal-day-hd.today .day-date{color:var(--red-bright)}
+.time-label{height:36px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;padding:0 6px;font-size:9px;color:var(--text-dim);letter-spacing:1px;background:var(--surface)}
+.time-cell{height:36px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;position:relative}
+.time-cell:last-child{border-right:none}
+.time-cell:hover{background:var(--red-dim)}
+.time-cell.selecting{background:#4a0e0e}
+.time-cell.slotted{background:var(--red-dim);cursor:default}
+.time-cell.slotted:hover{background:#7a1515}
+.slot-label{position:absolute;top:1px;left:2px;right:2px;font-size:8px;color:#e8e0d5;letter-spacing:1px;overflow:hidden;white-space:nowrap;pointer-events:none}
+
+/* ── Slot list ── */
+.slot-items{margin-bottom:24px}
+.slot-item{background:var(--surface);border:1px solid var(--border-red);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.slot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.slot-dot.open{background:var(--green-bright)}
+.slot-dot.closed{background:var(--text-dim)}
+.slot-dot.full{background:var(--red-bright)}
+.slot-info{flex:1;min-width:180px}
+.slot-datetime{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--text)}
+.slot-sub{font-size:11px;color:var(--text-muted);margin-top:2px;letter-spacing:1px}
+.slot-acts{display:flex;gap:6px;flex-wrap:wrap}
+.empty-state{text-align:center;padding:32px;color:var(--text-dim);font-size:12px;letter-spacing:2px;border:1px dashed var(--border)}
+.loading-text{text-align:center;color:var(--text-muted);font-size:11px;letter-spacing:4px;padding:32px;text-transform:uppercase}
+
+/* ── Cap setting ── */
+.cap-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.cap-row label{font-size:10px;letter-spacing:4px;color:var(--text-muted);text-transform:uppercase;white-space:nowrap}
+.cap-input{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;font-family:'Noto Sans TC',sans-serif;font-size:14px;width:70px;outline:none;border-radius:0;-webkit-appearance:none}
+.cap-input:focus{border-color:var(--red-dim)}
+.cap-row span{font-size:12px;color:var(--text-dim);letter-spacing:1px}
+
+/* ── Template editor ── */
+.tpl-card{background:var(--surface);border:1px solid var(--border-red);margin-bottom:16px;overflow:hidden}
+.tpl-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:12px}
+.tpl-header-left{display:flex;align-items:center;gap:12px;flex:1}
+.tpl-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
+.tpl-name{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text)}
+.tpl-price{font-size:12px;color:var(--red-bright);letter-spacing:1px}
+.tpl-body{display:none;padding:20px;border-top:1px solid var(--border)}
+.tpl-body.open{display:block}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:10px;letter-spacing:4px;color:var(--text-muted);text-transform:uppercase}
+.form-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 13px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;outline:none;transition:border-color 0.2s;border-radius:0;width:100%;-webkit-appearance:none}
+.form-input:focus{border-color:var(--red-dim)}
+.form-input::placeholder{color:var(--text-dim)}
+textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
+.price-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.price-item{display:flex;flex-direction:column;gap:5px}
+.save-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+/* ── Bookings ── */
+.booking-card{background:var(--surface);border:1px solid var(--border);margin-bottom:10px;overflow:hidden}
+.booking-header{padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap}
+.bk-status{font-size:9px;letter-spacing:2px;border:1px solid;padding:3px 8px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.bk-status.pending{color:#c4a010;border-color:#4a3a08}
+.bk-status.approved{color:var(--green-bright);border-color:#2a5a2a}
+.bk-status.cancelled{color:var(--text-dim);border-color:var(--border)}
+.bk-main{flex:1;min-width:160px}
+.bk-name{font-size:14px;color:var(--text);margin-bottom:3px}
+.bk-course{font-size:11px;color:var(--text-muted);letter-spacing:1px}
+.bk-amount{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text);text-align:right;white-space:nowrap}
+.bk-last5{font-size:11px;color:var(--text-dim);text-align:right;letter-spacing:1px}
+
+.booking-detail{display:none;padding:16px;border-top:1px solid var(--border);background:var(--surface2)}
+.booking-detail.open{display:block}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.detail-item .dl{font-size:10px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px}
+.detail-item .dv{font-size:13px;color:var(--text);letter-spacing:0.5px;line-height:1.5}
+.detail-item .dv.highlight{color:var(--red-bright);font-family:'Cormorant Garamond',serif;font-size:17px}
+.booking-acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid var(--border-red);color:var(--text);padding:11px 24px;font-size:11px;letter-spacing:3px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">後台管理</div>
+    <div class="login-sub">Le Hemora Workshop</div>
+    <input type="password" id="pw-input" placeholder="輸入密碼" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-err" id="login-err"></div>
+    <button class="btn btn-full" onclick="doLogin()"><span>進入後台 →</span></button>
+  </div>
+</div>
+
+<!-- Admin -->
+<div id="admin-shell">
+  <div class="admin-header">
+    <div class="admin-logo">Le Hemora <span>後台管理</span></div>
+    <div class="admin-nav">
+      <button class="nav-btn active" id="tab-slots" onclick="switchTab('slots')">時段管理</button>
+      <button class="nav-btn" id="tab-templates" onclick="switchTab('templates')">課程設定</button>
+      <button class="nav-btn" id="tab-bookings" onclick="switchTab('bookings')">預約紀錄 <span class="nav-badge" id="pending-badge" style="display:none">0</span></button>
+      <button class="nav-btn btn-ghost" onclick="doLogout()" style="margin-left:4px">登出</button>
+    </div>
+  </div>
+
+  <!-- 時段管理 -->
+  <div class="admin-body panel active" id="panel-slots">
+    <div class="week-nav">
+      <div class="week-label" id="week-label"></div>
+      <div class="week-btns">
+        <button class="btn btn-sm btn-ghost" onclick="changeWeek(-1)"><span>← 上週</span></button>
+        <button class="btn btn-sm btn-ghost" onclick="changeWeek(0)"><span>本週</span></button>
+        <button class="btn btn-sm btn-ghost" onclick="changeWeek(1)"><span>下週 →</span></button>
+      </div>
+    </div>
+
+    <div class="cal-wrap"><div class="calendar" id="calendar"></div></div>
+
+    <div class="cap-row">
+      <label>每時段人數上限</label>
+      <input type="number" class="cap-input" id="cap-input" value="6" min="1" max="20">
+      <span>人</span>
+    </div>
+
+    <div class="section-label">本週已設定時段</div>
+    <div id="slot-items-list"><div class="loading-text">— 載入中 —</div></div>
+    <button class="btn" id="save-slots-btn" onclick="saveNewSlots()" style="display:none"><span>儲存新增時段 →</span></button>
+  </div>
+
+  <!-- 課程設定 -->
+  <div class="admin-body panel" id="panel-templates">
+    <div class="section-label">課程項目</div>
+    <div id="templates-list"><div class="loading-text">— 載入中 —</div></div>
+  </div>
+
+  <!-- 預約紀錄 -->
+  <div class="admin-body panel" id="panel-bookings">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="stat-pending">—</div><div class="stat-label">待確認</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-approved">—</div><div class="stat-label">已核准</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">總筆數</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-revenue">—</div><div class="stat-label">已確認金額</div></div>
+    </div>
+    <div class="section-label">預約紀錄</div>
+    <div id="bookings-list"><div class="loading-text">— 載入中 —</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzVr5jhUgtvxO8e2UWqRNf16EHipiWKEQREhtqTUNZKhimOTEwnuJ-2Jvbcygo4AWh3/exec';
+const ADMIN_PW = 'lehemora2024';
+const HOURS = Array.from({length:14},(_,i)=>i+8);
+const DAYS_TW = ['日','一','二','三','四','五','六'];
+
+let state = {
+  weekOffset:0, slots:[], templates:[], bookings:[],
+  isDragging:false, dragStart:null, dragEnd:null,
+  pendingSlots:[], selectedCells:new Set()
+};
+
+// ── Auth ────────────────────────────────────────────────
+function doLogin(){
+  if(document.getElementById('pw-input').value===ADMIN_PW){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('admin-shell').style.display='block';
+    loadAll();
+  } else {
+    document.getElementById('login-err').textContent='密碼錯誤';
+    document.getElementById('pw-input').value='';
+  }
+}
+function doLogout(){
+  document.getElementById('admin-shell').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('pw-input').value='';
+}
+
+// ── Tab ─────────────────────────────────────────────────
+function switchTab(tab){
+  ['slots','templates','bookings'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('panel-'+t).classList.toggle('active',t===tab);
+  });
+}
+
+// ── Load all ────────────────────────────────────────────
+async function loadAll(){
+  try{
+    const [r1,r2,r3]=await Promise.all([
+      fetch(API+'?action=getSlots'),
+      fetch(API+'?action=getTemplates'),
+      fetch(API+'?action=getBookings')
+    ]);
+    const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
+    state.slots=d1.slots||[];
+    state.templates=d2.templates||[];
+    state.bookings=d3.bookings||[];
+    renderCalendar();
+    renderSlotList();
+    renderTemplates();
+    renderBookings();
+    updatePendingBadge();
+  }catch(e){showToast('載入失敗，請重試');}
+}
+
+// ── Week utils ──────────────────────────────────────────
+function getWeekDates(offset){
+  const now=new Date();
+  const day=now.getDay();
+  const mon=new Date(now);
+  mon.setDate(now.getDate()-day+(day===0?-6:1)+offset*7);
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+}
+function dateKey(d){return d.toISOString().slice(0,10);}
+function cellKey(ds,h){return ds+'_'+h;}
+function changeWeek(dir){
+  if(dir===0)state.weekOffset=0;
+  else state.weekOffset+=dir;
+  state.pendingSlots=[];
+  state.selectedCells=new Set();
+  renderCalendar();
+  renderSlotList();
+}
+
+// ── Calendar render ─────────────────────────────────────
+function renderCalendar(){
+  const dates=getWeekDates(state.weekOffset);
+  const today=dateKey(new Date());
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
+  const wS=dates[0],wE=dates[6];
+  document.getElementById('week-label').textContent=`${wS.getFullYear()} 年 ${fmt(wS)} – ${fmt(wE)}`;
+  const cal=document.getElementById('calendar');
+  let html=`<div class="cal-corner"></div>`;
+  dates.forEach(d=>{
+    html+=`<div class="cal-day-hd${dateKey(d)===today?' today':''}">
+      <span class="day-name">週${DAYS_TW[d.getDay()]}</span>
+      <span class="day-date">${d.getDate()}</span>
+    </div>`;
+  });
+  HOURS.forEach(h=>{
+    html+=`<div class="time-label">${String(h).padStart(2,'0')}:00</div>`;
+    dates.forEach(d=>{
+      const dk=dateKey(d);
+      const ck=cellKey(dk,h);
+      const isSelected=state.selectedCells.has(ck);
+      const existingSlot=getSlotAt(dk,h);
+      let cls='time-cell';
+      let label='';
+      if(existingSlot){
+        cls+=' slotted';
+        if(h===existingSlot.startH) label=`<div class="slot-label">${existingSlot.start_time}–${existingSlot.end_time}</div>`;
+      } else if(isSelected){
+        cls+=' selecting';
+      }
+      html+=`<div class="${cls}" data-date="${dk}" data-hour="${h}"
+        onmousedown="startDrag(event,'${dk}',${h})"
+        onmouseover="moveDrag(event,'${dk}',${h})"
+        onmouseup="endDrag(event,'${dk}',${h})"
+        ontouchstart="startDrag(event,'${dk}',${h})"
+        ontouchmove="handleTouchMove(event)"
+        ontouchend="endDragTouch(event)"
+      >${label}</div>`;
+    });
+  });
+  cal.innerHTML=html;
+  document.addEventListener('mouseup',globalEndDrag,{once:false});
+}
+
+function getSlotAt(dateStr,hour){
+  const allSlots=[...state.slots,...state.pendingSlots];
+  return allSlots.find(s=>{
+    if(String(s.date).replace(/\//g,'-')!==dateStr) return false;
+    const sh=parseInt(s.start_time.split(':')[0]);
+    const eh=parseInt(s.end_time.split(':')[0]);
+    return hour>=sh && hour<eh;
+  })||null;
+}
+
+// ── Drag ────────────────────────────────────────────────
+function startDrag(e,dateStr,hour){
+  e.preventDefault();
+  if(getSlotAt(dateStr,hour)){
+    confirmRemoveSlot(dateStr,hour);
+    return;
+  }
+  state.isDragging=true;
+  state.dragStart={dateStr,hour};
+  state.dragEnd={dateStr,hour};
+  updateSelecting();
+}
+function moveDrag(e,dateStr,hour){
+  if(!state.isDragging) return;
+  if(state.dragStart.dateStr!==dateStr) return;
+  state.dragEnd={dateStr,hour};
+  updateSelecting();
+}
+function handleTouchMove(e){
+  e.preventDefault();
+  const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(el&&el.dataset.date) moveDrag(e,el.dataset.date,parseInt(el.dataset.hour));
+}
+function endDragTouch(e){
+  if(!state.isDragging) return;
+  finalizeSlot();
+}
+function endDrag(e,dateStr,hour){
+  if(!state.isDragging) return;
+  finalizeSlot();
+}
+function globalEndDrag(){
+  if(state.isDragging) finalizeSlot();
+}
+function finalizeSlot(){
+  state.isDragging=false;
+  if(!state.dragStart||!state.dragEnd) return;
+  const h1=Math.min(state.dragStart.hour,state.dragEnd.hour);
+  const h2=Math.max(state.dragStart.hour,state.dragEnd.hour);
+  if(h2-h1<1){clearSelecting();showToast('請至少選取 2 格');return;}
+  const dateStr=state.dragStart.dateStr;
+  const startTime=String(h1).padStart(2,'0')+':00';
+  const endTime=String(h2+1).padStart(2,'0')+':00';
+  const cap=parseInt(document.getElementById('cap-input').value)||6;
+  state.pendingSlots.push({id:'new_'+Date.now(),date:dateStr,start_time:startTime,end_time:endTime,max_capacity:cap,current_bookings:0,status:'open',isPending:true,startH:h1});
+  for(let h=h1;h<=h2;h++) state.selectedCells.add(cellKey(dateStr,h));
+  clearSelecting();
+  renderCalendar();
+  renderSlotList();
+  document.getElementById('save-slots-btn').style.display=state.pendingSlots.length?'block':'none';
+}
+function updateSelecting(){
+  document.querySelectorAll('.time-cell').forEach(el=>el.classList.remove('selecting'));
+  if(!state.dragStart||!state.dragEnd) return;
+  const h1=Math.min(state.dragStart.hour,state.dragEnd.hour);
+  const h2=Math.max(state.dragStart.hour,state.dragEnd.hour);
+  for(let h=h1;h<=h2;h++){
+    const el=document.querySelector(`[data-date="${state.dragStart.dateStr}"][data-hour="${h}"]`);
+    if(el&&!el.classList.contains('slotted')) el.classList.add('selecting');
+  }
+}
+function clearSelecting(){state.dragStart=null;state.dragEnd=null;}
+
+// ── Slot list ────────────────────────────────────────────
+function renderSlotList(){
+  const dates=getWeekDates(state.weekOffset);
+  const weekStart=dateKey(dates[0]);
+  const weekEnd=dateKey(dates[6]);
+  const allSlots=[...state.slots,...state.pendingSlots].filter(s=>{
+    const d=String(s.date).replace(/\//g,'-');
+    return d>=weekStart&&d<=weekEnd;
+  }).sort((a,b)=>{
+    const da=String(a.date).replace(/\//g,'-');
+    const db=String(b.date).replace(/\//g,'-');
+    return da>db?1:da<db?-1:a.start_time>b.start_time?1:-1;
+  });
+  const list=document.getElementById('slot-items-list');
+  if(!allSlots.length){list.innerHTML='<div class="empty-state">本週尚未設定任何時段</div>';return;}
+  list.innerHTML=allSlots.map(s=>{
+    const d=new Date(String(s.date).replace(/\//g,'-')+'T00:00:00');
+    const dayName='週'+DAYS_TW[d.getDay()];
+    const spots=parseInt(s.max_capacity)-(parseInt(s.current_bookings)||0);
+    const sc=s.status==='open'?'open':s.status==='full'?'full':'closed';
+    const isPending=s.isPending;
+    return `<div class="slot-item">
+      <div class="slot-dot ${sc}"></div>
+      <div class="slot-info">
+        <div class="slot-datetime">${String(s.date).replace(/-/g,'/')} ${dayName} &nbsp;${s.start_time}–${s.end_time}</div>
+        <div class="slot-sub">${isPending?'⏳ 尚未儲存':`${parseInt(s.current_bookings)||0} / ${s.max_capacity} 人已預約`}</div>
+      </div>
+      <div class="slot-acts">
+        ${isPending
+          ? `<button class="btn btn-sm btn-danger" onclick="removePendingSlot('${s.id}')"><span>移除</span></button>`
+          : s.status==='open'
+            ? `<button class="btn btn-sm btn-danger" onclick="updateSlotStatus('${s.id}','closed')"><span>關閉</span></button>`
+            : s.status==='closed'
+            ? `<button class="btn btn-sm btn-success" onclick="updateSlotStatus('${s.id}','open')"><span>開放</span></button>`
+            : `<span style="font-size:10px;letter-spacing:2px;color:var(--red-bright)">額滿</span>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removePendingSlot(id){
+  state.pendingSlots=state.pendingSlots.filter(s=>s.id!==id);
+  state.selectedCells=new Set();
+  renderCalendar();
+  renderSlotList();
+  document.getElementById('save-slots-btn').style.display=state.pendingSlots.length?'block':'none';
+}
+
+function confirmRemoveSlot(dateStr,hour){
+  const slot=getSlotAt(dateStr,hour);
+  if(!slot||slot.isPending){if(slot)removePendingSlot(slot.id);return;}
+  if(confirm('確定要刪除這個時段？')) deleteSlot(slot.id);
+}
+
+async function saveNewSlots(){
+  if(!state.pendingSlots.length) return;
+  const btn=document.getElementById('save-slots-btn');
+  btn.disabled=true;btn.querySelector('span').textContent='儲存中⋯⋯';
+  try{
+    for(const s of state.pendingSlots){
+      await fetch(API,{method:'POST',body:JSON.stringify({
+        action:'addSlot',date:String(s.date).replace(/-/g,'/'),
+        start_time:s.start_time,end_time:s.end_time,max_capacity:s.max_capacity
+      })});
+    }
+    state.pendingSlots=[];
+    state.selectedCells=new Set();
+    await loadAll();
+    showToast('✦ 時段已儲存');
+  }catch(e){showToast('儲存失敗，請重試');}
+  btn.disabled=false;btn.querySelector('span').textContent='儲存新增時段 →';
+  btn.style.display='none';
+}
+
+async function updateSlotStatus(slotId,status){
+  try{
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'updateSlot',slotId,status})});
+    const d=await r.json();
+    if(d.success){await loadAll();showToast('狀態已更新');}
+    else showToast('更新失敗：'+d.message);
+  }catch(e){showToast('連線錯誤');}
+}
+
+async function deleteSlot(slotId){
+  try{
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'deleteSlot',slotId})});
+    const d=await r.json();
+    if(d.success){await loadAll();showToast('時段已刪除');}
+    else showToast('刪除失敗：'+d.message);
+  }catch(e){showToast('連線錯誤');}
+}
+
+// ── Templates ────────────────────────────────────────────
+function renderTemplates(){
+  const list=document.getElementById('templates-list');
+  if(!state.templates.length){list.innerHTML='<div class="empty-state">尚無課程項目</div>';return;}
+  list.innerHTML=state.templates.map((t,i)=>`
+    <div class="tpl-card">
+      <div class="tpl-header" onclick="toggleTpl(${i})">
+        <div class="tpl-header-left">
+          <div class="tpl-dot"></div>
+          <div>
+            <div class="tpl-name">${t.title}</div>
+            <div class="tpl-price">NT$ ${Number(t.price_1).toLocaleString()} / 人起</div>
+          </div>
+        </div>
+        <span style="font-size:10px;letter-spacing:2px;color:var(--text-dim)">編輯 ↓</span>
+      </div>
+      <div class="tpl-body" id="tpl-body-${i}">
+        <div class="form-grid">
+          <div class="form-group"><span class="form-label">課程名稱</span><input class="form-input" id="te-title-${i}" value="${t.title||''}"></div>
+          <div class="form-group"><span class="form-label">一句話摘要</span><input class="form-input" id="te-tagline-${i}" value="${t.tagline||''}"></div>
+          <div class="form-group full"><span class="form-label">完整課程文案</span><textarea class="form-input" id="te-desc-${i}" rows="6">${t.description||''}</textarea></div>
+          <div class="form-group full"><span class="form-label">主視覺圖片網址</span><input class="form-input" id="te-img-${i}" value="${t.image_url||''}" placeholder="https://res.cloudinary.com/..."></div>
+        </div>
+        <div class="section-label" style="margin-top:16px">定價設定</div>
+        <div class="price-grid">
+          ${[1,2,3,4,5,6].map(n=>`
+            <div class="price-item">
+              <span class="form-label">${n} 人${n===1?'（原價）':'同行'}</span>
+              <input class="form-input" id="te-p${n}-${i}" type="number" value="${t['price_'+n]||''}" placeholder="${n===1?'必填':'留空=按原價'}">
+            </div>
+          `).join('')}
+        </div>
+        <div class="save-row">
+          <button class="btn btn-sm" onclick="saveTemplate(${i},'${t.id}')"><span>儲存變更</span></button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleTpl(i){
+  const body=document.getElementById('tpl-body-'+i);
+  body.classList.toggle('open');
+}
+
+async function saveTemplate(i,templateId){
+  const btn=event.target.closest('button');
+  btn.disabled=true;btn.querySelector('span').textContent='儲存中⋯⋯';
+  const fields={templateId,
+    title:document.getElementById('te-title-'+i).value,
+    tagline:document.getElementById('te-tagline-'+i).value,
+    description:document.getElementById('te-desc-'+i).value,
+    image_url:document.getElementById('te-img-'+i).value,
+  };
+  [1,2,3,4,5,6].forEach(n=>{fields['price_'+n]=document.getElementById('te-p'+n+'-'+i).value;});
+  try{
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'updateTemplate',...fields})});
+    const d=await r.json();
+    if(d.success){await loadAll();showToast('✦ 課程資料已儲存');}
+    else showToast('儲存失敗：'+d.message);
+  }catch(e){showToast('連線錯誤');}
+  btn.disabled=false;btn.querySelector('span').textContent='儲存變更';
+}
+
+// ── Bookings ─────────────────────────────────────────────
+function renderBookings(){
+  const list=document.getElementById('bookings-list');
+  const pending=state.bookings.filter(b=>b.status==='待確認').length;
+  const approved=state.bookings.filter(b=>b.status==='已核准').length;
+  const revenue=state.bookings.filter(b=>b.status==='已核准').reduce((s,b)=>s+parseInt(b.total_amount||0),0);
+  document.getElementById('stat-pending').textContent=pending;
+  document.getElementById('stat-approved').textContent=approved;
+  document.getElementById('stat-total').textContent=state.bookings.length;
+  document.getElementById('stat-revenue').textContent='$'+revenue.toLocaleString();
+  if(!state.bookings.length){list.innerHTML='<div class="empty-state">尚無預約紀錄</div>';return;}
+  const sorted=[...state.bookings].sort((a,b)=>a.created_at<b.created_at?1:-1);
+  list.innerHTML=sorted.map((b,i)=>{
+    const sc=b.status==='待確認'?'pending':b.status==='已核准'?'approved':'cancelled';
+    return `<div class="booking-card">
+      <div class="booking-header" onclick="toggleBooking(${i})">
+        <span class="bk-status ${sc}">${b.status}</span>
+        <div class="bk-main">
+          <div class="bk-name">${b.contact_name} &nbsp;<span style="font-size:11px;color:var(--text-muted)">${b.participants}人</span></div>
+          <div class="bk-course">${b.course_title} ／ ${b.course_date}</div>
+        </div>
+        <div>
+          <div class="bk-amount">NT$ ${parseInt(b.total_amount||0).toLocaleString()}</div>
+          <div class="bk-last5">末五碼：${b.transfer_last5||'—'}</div>
+        </div>
+      </div>
+      <div class="booking-detail" id="bk-detail-${i}">
+        <div class="detail-grid">
+          <div class="detail-item"><div class="dl">聯絡人</div><div class="dv">${b.contact_name}</div></div>
+          <div class="detail-item"><div class="dl">電話</div><div class="dv">${b.phone}</div></div>
+          <div class="detail-item"><div class="dl">Email</div><div class="dv">${b.email}</div></div>
+          <div class="detail-item"><div class="dl">人數</div><div class="dv">${b.participants} 人</div></div>
+          <div class="detail-item"><div class="dl">課程</div><div class="dv">${b.course_title}</div></div>
+          <div class="detail-item"><div class="dl">時段</div><div class="dv">${b.course_date} ${b.course_time}</div></div>
+          <div class="detail-item"><div class="dl">金額</div><div class="dv highlight">NT$ ${parseInt(b.total_amount||0).toLocaleString()}</div></div>
+          <div class="detail-item"><div class="dl">轉帳末五碼</div><div class="dv highlight">${b.transfer_last5||'—'}</div></div>
+          <div class="detail-item"><div class="dl">備注</div><div class="dv">${b.note||'—'}</div></div>
+          <div class="detail-item"><div class="dl">預約時間</div><div class="dv">${b.created_at}</div></div>
+          <div class="detail-item"><div class="dl">預約編號</div><div class="dv">${b.booking_id}</div></div>
+        </div>
+        ${b.status==='待確認'?`
+        <div class="booking-acts">
+          <button class="btn btn-sm btn-success" onclick="handleBooking('${b.booking_id}','approve')"><span>✅ 核准此預約</span></button>
+          <button class="btn btn-sm btn-danger" onclick="handleBooking('${b.booking_id}','reject')"><span>❌ 取消此預約</span></button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleBooking(i){
+  document.getElementById('bk-detail-'+i).classList.toggle('open');
+}
+
+async function handleBooking(bookingId,type){
+  const action=type==='approve'?'approve':'reject';
+  const label=type==='approve'?'核准':'取消';
+  if(!confirm(`確定要${label}此預約？`)) return;
+  try{
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action,bookingId})});
+    const d=await r.json();
+    if(d.success){
+      await loadAll();
+      showToast(type==='approve'?'✅ 已核准，確認信已寄出':'已取消此預約');
+    } else showToast('操作失敗：'+d.message);
+  }catch(e){showToast('連線錯誤');}
+}
+
+function updatePendingBadge(){
+  const cnt=state.bookings.filter(b=>b.status==='待確認').length;
+  const badge=document.getElementById('pending-badge');
+  badge.textContent=cnt;
+  badge.style.display=cnt>0?'inline':'none';
+}
+
+// ── Utils ────────────────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
