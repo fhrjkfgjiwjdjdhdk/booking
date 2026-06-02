@@ -229,7 +229,7 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbzVr5jhUgtvxO8e2UWqRNf16EHipiWKEQREhtqTUNZKhimOTEwnuJ-2Jvbcygo4AWh3/exec';
-const ADMIN_PW = 'lehemora2024';
+let SESSION_TOKEN = null; // 存在記憶體，關閉瀏覽器即失效
 const HOURS = Array.from({length:14},(_,i)=>i+8);
 const DAYS_TW = ['日','一','二','三','四','五','六'];
 
@@ -240,17 +240,36 @@ let state = {
 };
 
 // ── Auth ────────────────────────────────────────────────
-function doLogin(){
-  if(document.getElementById('pw-input').value===ADMIN_PW){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('admin-shell').style.display='block';
-    loadAll();
-  } else {
-    document.getElementById('login-err').textContent='密碼錯誤';
-    document.getElementById('pw-input').value='';
+async function doLogin(){
+  const pw = document.getElementById('pw-input').value;
+  if(!pw){ document.getElementById('login-err').textContent='請輸入密碼'; return; }
+  const btn = document.querySelector('#login-screen .btn');
+  btn.disabled = true; btn.querySelector('span').textContent = '驗證中⋯⋯';
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', password: pw })
+    });
+    const d = await r.json();
+    if(d.success){
+      SESSION_TOKEN = d.token;
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('admin-shell').style.display='block';
+      loadAll();
+    } else {
+      document.getElementById('login-err').textContent = d.message || '密碼錯誤';
+      document.getElementById('pw-input').value='';
+    }
+  } catch(e) {
+    document.getElementById('login-err').textContent = '連線失敗，請重試';
   }
+  btn.disabled = false; btn.querySelector('span').textContent = '進入後台 →';
 }
-function doLogout(){
+async function doLogout(){
+  if(SESSION_TOKEN){
+    try { await fetch(API,{method:'POST',body:JSON.stringify({action:'logout',token:SESSION_TOKEN})}); } catch(e){}
+    SESSION_TOKEN = null;
+  }
   document.getElementById('admin-shell').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('pw-input').value='';
@@ -544,7 +563,7 @@ async function saveNewSlots(){
   try{
     for(const s of state.pendingSlots){
       await fetch(API,{method:'POST',body:JSON.stringify({
-        action:'addSlot',date:String(s.date).replace(/-/g,'/'),
+        action:'addSlot',token:SESSION_TOKEN,date:String(s.date).replace(/-/g,'/'),
         start_time:s.start_time,end_time:s.end_time,max_capacity:s.max_capacity
       })});
     }
@@ -559,8 +578,9 @@ async function saveNewSlots(){
 
 async function updateSlotStatus(slotId,status){
   try{
-    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'updateSlot',slotId,status})});
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'updateSlot',token:SESSION_TOKEN,slotId,status})});
     const d=await r.json();
+    if(d.message==='SESSION_EXPIRED'){handleSessionExpired();return;}
     if(d.success){await loadAll();showToast('狀態已更新');}
     else showToast('更新失敗：'+d.message);
   }catch(e){showToast('連線錯誤');}
@@ -568,7 +588,7 @@ async function updateSlotStatus(slotId,status){
 
 async function deleteSlot(slotId){
   try{
-    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'deleteSlot',slotId})});
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'deleteSlot',token:SESSION_TOKEN,slotId})});
     const d=await r.json();
     if(d.success){await loadAll();showToast('時段已刪除');}
     else showToast('刪除失敗：'+d.message);
@@ -631,7 +651,7 @@ async function saveTemplate(i,templateId){
   };
   [1,2,3,4,5,6].forEach(n=>{fields['price_'+n]=document.getElementById('te-p'+n+'-'+i).value;});
   try{
-    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'updateTemplate',...fields})});
+    const r=await fetch(API,{method:'POST',body:JSON.stringify({action:'updateTemplate',token:SESSION_TOKEN,...fields})});
     const d=await r.json();
     if(d.success){await loadAll();showToast('✦ 課程資料已儲存');}
     else showToast('儲存失敗：'+d.message);
