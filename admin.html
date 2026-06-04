@@ -289,11 +289,12 @@ async function loadAll(){
     const [r1,r2,r3]=await Promise.all([
       fetch(API+'?action=getSlots'),
       fetch(API+'?action=getTemplates'),
-      fetch(API+'?action=getBookings')
+      fetch(API,{method:'POST',body:JSON.stringify({action:'getBookings',token:SESSION_TOKEN})})
     ]);
     const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
     state.slots=(d1.slots||[]).map(normalizeSlot).map(s=>({...s,startH:parseInt(normalizeTime(s.start_time).split(':')[0])}));
     state.templates=d2.templates||[];
+    if(d3.message==='SESSION_EXPIRED'){handleSessionExpired();return;}
     state.bookings=d3.bookings||[];
     renderCalendar();
     renderSlotList();
