@@ -679,7 +679,7 @@ function renderBookings(){
         <span class="bk-status ${sc}">${b.status}</span>
         <div class="bk-main">
           <div class="bk-name">${b.contact_name} &nbsp;<span style="font-size:11px;color:var(--text-muted)">${b.participants}人</span></div>
-          <div class="bk-course">${b.course_title} ／ ${b.course_date}</div>
+          <div class="bk-course">${b.course_title} ／ ${b.course_date} ${b.course_time}</div>
         </div>
         <div>
           <div class="bk-amount">NT$ ${parseInt(b.total_amount||0).toLocaleString()}</div>
