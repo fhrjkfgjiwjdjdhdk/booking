@@ -131,6 +131,9 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
 .save-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
 
 /* ── Bookings ── */
+.month-selector-row{margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.month-selector-row select{background:var(--surface);border:1px solid var(--border-red);color:var(--text);padding:8px 14px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;outline:none;border-radius:0;cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239a8f82'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.month-selector-row select option{background:var(--surface)}
 .booking-card{background:var(--surface);border:1px solid var(--border);margin-bottom:10px;overflow:hidden}
 .booking-header{padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap}
 .bk-status{font-size:9px;letter-spacing:2px;border:1px solid;padding:3px 8px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
@@ -214,6 +217,9 @@ textarea.form-input{resize:vertical;min-height:100px;line-height:1.7}
 
   <!-- 預約紀錄 -->
   <div class="admin-body panel" id="panel-bookings">
+    <div class="month-selector-row">
+      <select id="month-select" onchange="renderBookings()"></select>
+    </div>
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num" id="stat-pending">—</div><div class="stat-label">待確認</div></div>
       <div class="stat-card"><div class="stat-num" id="stat-approved">—</div><div class="stat-label">已核准</div></div>
@@ -661,17 +667,42 @@ async function saveTemplate(i,templateId){
 }
 
 // ── Bookings ─────────────────────────────────────────────
+function buildMonthOptions(){
+  const sel=document.getElementById('month-select');
+  if(!state.bookings.length) return;
+  const months=new Set();
+  state.bookings.forEach(b=>{
+    const d=String(b.course_date||b.created_at||'');
+    const m=d.slice(0,7).replace('-','/');
+    if(m&&m.length===7) months.add(m);
+  });
+  const now=new Date();
+  const thisMonth=now.getFullYear()+'/'+(String(now.getMonth()+1).padStart(2,'0'));
+  const sorted=[...months].sort().reverse();
+  if(!sorted.includes(thisMonth)) sorted.unshift(thisMonth);
+  const prev=sel.value;
+  sel.innerHTML=sorted.map(m=>`<option value="${m}">${m.replace('/',' 年 ')} 月</option>`).join('');
+  if(prev&&sorted.includes(prev)) sel.value=prev;
+  else sel.value=thisMonth;
+}
+
 function renderBookings(){
+  buildMonthOptions();
+  const selectedMonth=document.getElementById('month-select').value;
+  const filtered=state.bookings.filter(b=>{
+    const d=String(b.course_date||'');
+    return d.startsWith(selectedMonth);
+  });
   const list=document.getElementById('bookings-list');
-  const pending=state.bookings.filter(b=>b.status==='待確認').length;
-  const approved=state.bookings.filter(b=>b.status==='已核准').length;
-  const revenue=state.bookings.filter(b=>b.status==='已核准').reduce((s,b)=>s+parseInt(b.total_amount||0),0);
+  const pending=filtered.filter(b=>b.status==='待確認').length;
+  const approved=filtered.filter(b=>b.status==='已核准').length;
+  const revenue=filtered.filter(b=>b.status==='已核准').reduce((s,b)=>s+parseInt(b.total_amount||0),0);
   document.getElementById('stat-pending').textContent=pending;
   document.getElementById('stat-approved').textContent=approved;
-  document.getElementById('stat-total').textContent=state.bookings.length;
+  document.getElementById('stat-total').textContent=filtered.length;
   document.getElementById('stat-revenue').textContent='$'+revenue.toLocaleString();
-  if(!state.bookings.length){list.innerHTML='<div class="empty-state">尚無預約紀錄</div>';return;}
-  const sorted=[...state.bookings].sort((a,b)=>a.created_at<b.created_at?1:-1);
+  if(!filtered.length){list.innerHTML='<div class="empty-state">本月尚無預約紀錄</div>';return;}
+  const sorted=[...filtered].sort((a,b)=>a.created_at<b.created_at?1:-1);
   list.innerHTML=sorted.map((b,i)=>{
     const sc=b.status==='待確認'?'pending':b.status==='已核准'?'approved':'cancelled';
     return `<div class="booking-card">
