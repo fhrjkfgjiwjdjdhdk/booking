@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>體驗課程預約｜Le Hemora Parfum 赫墨拉之水</title>
-<meta name="description" content="Le Hemora Parfum 赫墨拉之水體驗課程預約。魔法世界主題調香、命理調香體驗課。">
+<title>體驗課程預約｜isroom 遺室</title>
+<meta name="description" content="isroom 遺室｜體驗課程預約。魔法世界主題調香、命理調香體驗課。">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -174,7 +174,7 @@ textarea{resize:vertical;min-height:76px;line-height:1.7}
 <body>
 
 <header>
-  <div class="brand-en">Le Hemora Parfum &nbsp;✦&nbsp; 遺世感獨創</div>
+  <div class="brand-en">isroom &nbsp;✦&nbsp; 遺室</div>
   <div class="brand-main">體驗課程預約</div>
   <div class="brand-sub">Workshop Reservation</div>
 </header>
@@ -191,7 +191,7 @@ textarea{resize:vertical;min-height:76px;line-height:1.7}
     </div>
     <div class="detail-panel" id="detail-panel">
       <div class="detail-inner">
-        <div id="detail-img-wrap"><div class="detail-img-ph"><span>Le Hemora</span></div></div>
+        <div id="detail-img-wrap"><div class="detail-img-ph"><span>isroom 遺室</span></div></div>
         <div class="detail-text">
           <div class="detail-which">已選課程說明</div>
           <div class="detail-title" id="detail-title"></div>
@@ -371,8 +371,8 @@ function selectCourse(idx) {
   document.getElementById('detail-tags').innerHTML = buildTags(t);
   const imgWrap = document.getElementById('detail-img-wrap');
   imgWrap.innerHTML = t.image_url
-    ? `<img class="detail-img" src="${t.image_url}" onerror="this.outerHTML='<div class=detail-img-ph><span>Le Hemora</span></div>'">`
-    : '<div class="detail-img-ph"><span>Le Hemora</span></div>';
+    ? `<img class="detail-img" src="${t.image_url}" onerror="this.outerHTML='<div class=detail-img-ph><span>isroom</span></div>'">`
+    : '<div class="detail-img-ph"><span>isroom</span></div>';
   document.getElementById('detail-arrow').style.display = 'block';
   if (!state.detailOpen) openDetail();
   updateCTA();
